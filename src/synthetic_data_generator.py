@@ -203,9 +203,81 @@ class SyntheticDataGenerator:
 
     # --------------------------------------------------------
 
-    def generate_sessions(self, users):
+    def generate_sessions(
+        self,
+        users: pd.DataFrame,
+    ) -> pd.DataFrame:
+        """
+        Generate the Session dataset.
 
-        raise NotImplementedError
+        Each user will have between 1 and 8 sessions.
+        Session timestamps are constrained within the
+        observation window.
+        """
+
+        logger.info("Generating session dataset...")
+
+        sessions: list[dict] = []
+        session_counter = 1
+
+        start_date = pd.to_datetime(self.config.start_date)
+        window_end = start_date + pd.Timedelta(days=self.config.days)
+
+        for _, user in users.iterrows():
+
+            num_sessions = np.random.randint(
+                low=1,
+                high=9,
+            )
+
+            # Keep all generated sessions within the observation window.
+            remaining_days = max(
+                (window_end - user["signup_date"]).days,
+                1,
+            )
+
+            for _ in range(num_sessions):
+
+                offset_days = np.random.randint(
+                    low=0,
+                    high=remaining_days,
+                )
+
+                session_date = (
+                    user["signup_date"]
+                    + pd.Timedelta(days=offset_days)
+                )
+
+                session_time = pd.Timedelta(
+                    hours=np.random.randint(9, 22),
+                    minutes=np.random.randint(0, 60),
+                    seconds=np.random.randint(0, 60),
+                )
+
+                sessions.append(
+                    {
+                        "session_id": f"S{session_counter:09d}",
+                        "user_id": user["user_id"],
+                        "session_start": session_date + session_time,
+                        "platform": user["platform"],
+                    }
+                )
+
+                session_counter += 1
+
+        sessions = pd.DataFrame(sessions)
+
+        logger.info(
+            "Generated %d sessions.",
+            len(sessions),
+        )
+
+        logger.info(
+            "Average sessions per user: %.2f",
+            len(sessions) / len(users),
+        )
+
+        return sessions
 
     # --------------------------------------------------------
 
