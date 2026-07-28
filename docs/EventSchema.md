@@ -22,12 +22,31 @@ Every business event shares the following common attributes.
 | schema_version | STRING | Yes | Schema version identifier |
 | user_id | STRING | Yes | User identifier |
 | session_id | STRING | Yes | User session identifier |
-| event_timestamp | TIMESTAMP | Yes | Event occurrence timestamp |
+| event_timestamp | TIMESTAMP | Yes | Event occurrence timestamp (business time) |
+| ingestion_timestamp | TIMESTAMP | Yes | Time the event was received by the data platform (platform time) |
 | platform | STRING | Yes | Web / Mobile |
 | device_type | STRING | Yes | Desktop / Mobile / Tablet |
 | country | STRING | Yes | User country |
 | app_version | STRING | No | Application version |
 | traffic_source | STRING | No | Marketing acquisition source |
+
+---
+
+## event_timestamp vs. ingestion_timestamp
+
+These two fields represent different points in time and are intentionally kept separate.
+
+- **event_timestamp** — When the business event actually occurred (business chronology).
+- **ingestion_timestamp** — When the event was received by the data platform (platform chronology).
+
+In the clean dataset, the two are always equal: every event is assumed to be ingested immediately as it occurs.
+
+A **Late-arriving Events** Data Quality issue (see `DataQualityInjection.md`) simulates delayed ingestion by shifting `ingestion_timestamp` forward while leaving `event_timestamp` unchanged. This preserves:
+
+- Business chronology (the order in which things actually happened)
+- Schema Validation Rule 5a / 5b (which are evaluated using `event_timestamp`)
+
+while still allowing Freshness-related metrics (which are evaluated using `ingestion_timestamp`) to detect the delay.
 
 ---
 
@@ -178,6 +197,12 @@ Schema evolution should avoid breaking downstream analytics.
 ## 5. Traceability
 
 Business events that belong to the same customer transaction should be linked through a shared business identifier (for example, `checkout_id`) rather than inferred using timestamps alone.
+
+---
+
+## 6. Event Time vs. Ingestion Time
+
+Business occurrence time (`event_timestamp`) and platform ingestion time (`ingestion_timestamp`) are modeled as distinct fields. This separation allows the repository to simulate realistic data platform delays (Late-arriving Events) without corrupting business chronology or violating event ordering rules.
 
 ---
 
